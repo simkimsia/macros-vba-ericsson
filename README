@@ -6,3 +6,5 @@ Input file has all the data in the sheet spelled
 
 Input file is assumed to have at least 1 Phase
 
+Unit Gross of a Parent is always
+ONE parent --> X Children
