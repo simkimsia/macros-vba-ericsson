@@ -8,3 +8,5 @@ Input file is assumed to have at least 1 Phase
 
 Unit Gross of a Parent is always
 ONE parent --> X Children
+
+If unit is not stated (i.e. BLANK CELL), it is assumed to be 1
