@@ -22,3 +22,5 @@ For Summary Tab, we've assumed the formulas as follows:
 Total Gross = Total Gross of the Tab
 Total Net (b4 incentives) = Total Net of the tab
 Total Net (after incentives) = Total net (b4 incentives) - Incentives
+
+We expect One (and only one) phase
