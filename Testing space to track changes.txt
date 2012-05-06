@@ -1,0 +1,266 @@
+Sub ImportAndExportDamien()
+    Application.DisplayAlerts = False
+    On Error Resume Next
+    
+    Dim FilesToOpen, Template, DataWkb, NewBook As Workbook
+    Dim Row, itemCol, nameCol, qtyCol, unitGrossCol, totalGrossCol, discountCol, totalNetCol, itemIn, nameIn, qtyIn, unitGrossIn, discountIn As Integer
+    Dim okay As Boolean
+    Dim Limit As Integer
+    'Allows us to toggle during testing
+    'Value of -1 loops thru whol file
+    Limit = -1
+    
+    ' this is the columns in the output file
+    itemCol = 1
+    nameCol = 2
+    qtyCol = 3
+    unitGrossCol = 5
+    totalGrossCol = 6
+    discountCol = 7
+    totalNetCol = 8
+        
+    ' this is the columns in the database
+    itemIn = 1
+    nameIn = 8
+    qtyIn = 9
+    unitGrossIn = 10
+    discountIn = 12
+    
+    Dim SummaryRow As Integer
+    Dim SummaryPhase As Integer
+    Dim SummaryArea As Integer
+    Dim SummaryTotalGross As Integer
+    Dim SummaryTotalNetBeforeIncentives As Integer
+    Dim SummaryTotalNetAfterIncentives As Integer
+    
+    'this is the Row in the summary tab
+    SummaryRow = 18
+    
+    'these are the columns in the summary tab
+    SummaryPhase = 1
+    SummaryArea = 2
+    SummaryTotalGross = 5
+    SummaryTotalNetBeforeIncentives = 7
+    SummaryTotalNetAfterIncentives = 8
+    
+    'Opens the window for the user to choose the Excel File to Import data from
+    MsgBox "Please select the Data Input File"
+    FilesToOpen = Application.GetOpenFilename(Title:="Import Data")
+    
+    'Checks if the user selects any file
+    If TypeName(FilesToOpen) = "Boolean" Then
+        MsgBox "No files were selected."
+        Exit Sub
+    End If
+    
+    Call ClearDatabase
+    Set DataWkb = Workbooks.Open(Filename:=FilesToOpen)
+    Call copyDataToDB(DataWkb, Limit)
+    Call FillInCurrentNumber
+    Call MakeTree
+    Sheets("Database").Activate
+    Call RebuildTree("1", 1)
+    Call determineBottomLevel
+    Call copyUnitGrossQuantityDiscountToDB(DataWkb)
+    DataWkb.Close
+    Set DataWkb = Nothing
+    Call generateFormulaeForNonBottom
+    
+    Dim Tabs As New Dictionary
+    Set Tabs = getAreas()
+    
+    Set NewBook = Workbooks.Add
+    
+    ThisWorkbook.Sheets("Summary").Copy _
+            NewBook.Sheets("Sheet1")
+    
+    'creating the output file with empty Summary and Area tabs
+    With NewBook
+        .Sheets("Summary").Cells(11, 2).value = Format(Date, "DD MMMM, YYYY")
+        .Sheets("Sheet1").Delete
+        .Sheets("Sheet2").Delete
+        .Sheets("Sheet3").Delete
+        
+        For Each record In Tabs.Items()
+            If record.item("Item_No") = "1.1" Then
+                testArea = "1.1"
+                testAreaLeft = CInt(record.item("Left"))
+                testAreaRight = CInt(record.item("Right"))
+            End If
+            
+            'copies the template tab from this workbook to Output file
+            ThisWorkbook.Sheets("detail Template").Copy _
+                after:=NewBook.Sheets(.Worksheets.Count)
+                
+            'renames the tab
+            .Sheets("detail Template").Name = record.item("Title")
+            
+            'adjusts the numbers from column E to H to make all of them 2 decimal places
+            .Sheets(record.item("Title")).Range("E:H").NumberFormat = "0.00"
+            
+            'copies the date from the summary tab
+            .Sheets(record.item("Title")).Cells(5, 2).value = .Sheets("Summary").Cells(11, 2).value
+        Next record
+        
+        .SaveAs "2nd_bottom_ (" & Format(Date, "Medium Date") & ")"
+        Dim OutputFileName As String
+        OutputFileName = .FullName
+        .Close
+    End With
+    
+    Set NewBook = Nothing
+    
+    Dim Phases As New Dictionary
+    Set Phases = getPreparedPhases
+    
+    Dim LastKnownPhase As String
+    LastKnownPhase = ""
+                    
+    Dim SecondBottomDict As New Dictionary
+    Set SecondBottomDict = get2ndBottomNodes()
+   
+    'now we insert the items into each area tab one by one
+    For Each AreaTab In Tabs.Items()
+        Dim RightNo As Integer, LeftNo As Integer
+        
+        'we need the right and left number of the area to get all the records in the area
+        RightNo = AreaTab.item("Right")
+        LeftNo = AreaTab.item("Left")
+        
+        'getting all the records in the area
+        Dim AllRecordsInArea As New Dictionary
+        Dim AllRecordsInAreaClone As New Dictionary
+        Set AllRecordsInArea = getWholeAreaSorted(LeftNo, RightNo)
+        
+        'we need the title of the area
+        Dim CurrentTab As String
+        CurrentTab = CStr(AreaTab.item("Title"))
+        
+        'now we open the Output file to insert data
+        Dim OutputFile As Workbook
+        Set OutputFile = Workbooks.Open(Filename:=OutputFileName)
+        
+        'we will start inserting data at row 10 of the output sheet
+        Dim OutputFirstRow As Integer
+        Dim OutputFirstRowConstant As Integer
+        
+        'we will start from row 10, and the constant will store this number to it will be easier to reset
+        OutputFirstRowConstant = 10
+        
+        'outputfirstrow is a counter
+        OutputFirstRow = OutputFirstRowConstant
+        
+        With OutputFile
+        
+            'select the correct sheet based on the area title
+            With .Sheets(CurrentTab)
+                'now we loop thru all the records that should appear in this data sheet
+                For Each record In AllRecordsInArea.Items()
+                    'insert all the data
+                    Dim ItemNumberString As String
+                    ItemNumberString = CStr(record.item("Item_No"))
+                    
+                    .Range(OutputFirstRow + 1 & ":" & OutputFirstRow + 1).Insert shift:=xlDown
+                    
+                    .Cells(OutputFirstRow, itemCol).value = ItemNumberString 'Item No
+                    .Cells(OutputFirstRow, nameCol).value = record.item("Title") 'Title
+                    .Cells(OutputFirstRow, qtyCol).value = record.item("Quantity") 'Qty
+                    
+                    ' updating Database with the output row number
+                    Dim UpdateResult As Boolean
+                    UpdateResult = UpdateOutputRowForItem(ItemNumberString, OutputFirstRow, CurrentTab)
+                    
+                    'move to next row
+                    OutputFirstRow = OutputFirstRow + 1
+                Next record
+                
+                ' now we update the price stats in the sheet
+                ' reset the counter back to 10
+                OutputFirstRow = OutputFirstRowConstant
+               
+                For Each dataRecord In AllRecordsInArea.Items()
+                    Dim currentDataRow As New Dictionary
+                    Set currentDataRow = dataRecord
+                    
+                    Dim checkIfRowIs2ndBottom As Boolean
+                    checkIfRowIs2ndBottom = CheckIf2ndBottom(SecondBottomDict, currentDataRow.item("Item_No"))
+                             
+                    .Cells(OutputFirstRow, unitGrossCol).value = SetCorrectPriceStatInOutput("Unit Gross", currentDataRow, checkIfRowIs2ndBottom) 'Unit Gross
+                    .Cells(OutputFirstRow, totalGrossCol).value = SetCorrectPriceStatInOutput("Total Gross", currentDataRow, checkIfRowIs2ndBottom) 'Total Gross
+                    .Cells(OutputFirstRow, discountCol).value = SetCorrectPriceStatInOutput("Discount", currentDataRow, checkIfRowIs2ndBottom) 'Discount
+                    .Cells(OutputFirstRow, totalNetCol).value = SetCorrectPriceStatInOutput("Total Net", currentDataRow, checkIfRowIs2ndBottom) 'Total Net
+                    
+                    'move to next row
+                    OutputFirstRow = OutputFirstRow + 1
+                    
+                    Set currentDataRow = Nothing
+                Next dataRecord
+                
+                'insert a blank row to put the phase name in each area tab
+                .Range("10:10").Insert shift:=xlDown
+                
+                'insert grab phase data
+                Dim PhaseItemNo As String
+                PhaseItemNo = CStr(AreaTab.item("Parent"))
+                
+                Dim PhaseTitleString As String
+                PhaseTitleString = Phases.item(PhaseItemNo)
+                
+                'insert Phase Number and Title
+                .Cells(10, 1).value = PhaseItemNo 'item no
+                .Cells(10, 2).value = PhaseTitleString 'title
+                
+                'after all data is inserted, we get the Total Gross, Total Net, Support, and Net with Support
+                Dim TabTotalGross As Double
+                Dim TabTotalNet As Double
+                Dim TabSupport As Double
+                Dim TabNetWithSupport As Double
+            
+                'these are the rows in the current tab
+                TabTotalGross = .Cells(OutputFirstRow + 3, totalNetCol).value
+                TabTotalNet = .Cells(OutputFirstRow + 4, totalNetCol).value
+                TabSupport = .Cells(OutputFirstRow + 5, totalNetCol).value
+                TabNetWithSupport = .Cells(OutputFirstRow + 7, totalNetCol).value
+                
+                'group the rows in the current tab
+                .Range("10:" & OutputFirstRow).AutoOutline
+            End With
+    
+            'update the summary sheet now
+            With .Sheets("Summary")
+                
+                'insert a new row
+                .Range(SummaryRow & ":" & SummaryRow).Insert shift:=xlDown
+                
+                Dim CurrentPhase As String
+                CurrentPhase = PhaseTitleString
+                
+                If LastKnownPhase <> CurrentPhase Then
+                    LastKnownPhase = CurrentPhase
+                    .Cells(SummaryRow, SummaryPhase).value = LastKnownPhase
+                    SummaryRow = SummaryRow + 1
+                    .Range(SummaryRow & ":" & SummaryRow).Insert shift:=xlDown
+                End If
+                
+                'insert the area name
+                .Cells(SummaryRow, SummaryArea).value = CurrentTab
+                
+                'insert the total gross, total net (before incentives), and total net (after incentives)
+                .Cells(SummaryRow, SummaryTotalGross).value = TabTotalGross 'total gross
+                .Cells(SummaryRow, SummaryTotalNetBeforeIncentives).value = TabTotalNet 'total Net
+                
+                'move to next line
+                SummaryRow = SummaryRow + 1
+                
+                'set the cells to 2dp
+                .Range("E:H").NumberFormat = "0.00"
+                
+            End With
+            .Save
+            .Close
+        End With
+        Set AllRecordsInArea = Nothing
+    Next AreaTab
+    
+    MsgBox "DONE!"
+End Sub
