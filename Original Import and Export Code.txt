@@ -1,4 +1,4 @@
-Sub ImportAndExport()
+Sub ImportAndExportDamien()
     Application.DisplayAlerts = False
     On Error Resume Next
     
@@ -102,7 +102,7 @@ Sub ImportAndExport()
             .Sheets(record.item("Title")).Cells(5, 2).value = .Sheets("Summary").Cells(11, 2).value
         Next record
         
-        .SaveAs "Output (" & Format(Date, "Medium Date") & ")"
+        .SaveAs "2nd_bottom_ (" & Format(Date, "Medium Date") & ")"
         Dim OutputFileName As String
         OutputFileName = .FullName
         .Close
@@ -115,7 +115,10 @@ Sub ImportAndExport()
     
     Dim LastKnownPhase As String
     LastKnownPhase = ""
-    
+                    
+    Dim SecondBottomDict As New Dictionary
+    Set SecondBottomDict = get2ndBottomNodes()
+   
     'now we insert the items into each area tab one by one
     For Each AreaTab In Tabs.Items()
         Dim RightNo As Integer, LeftNo As Integer
@@ -179,10 +182,13 @@ Sub ImportAndExport()
                     Dim currentDataRow As New Dictionary
                     Set currentDataRow = dataRecord
                     
-                    .Cells(OutputFirstRow, unitGrossCol).value = SetCorrectPriceStatInOutput("Unit Gross", currentDataRow, False) 'Unit Gross
-                    .Cells(OutputFirstRow, totalGrossCol).value = SetCorrectPriceStatInOutput("Total Gross", currentDataRow, False) 'Total Gross
-                    .Cells(OutputFirstRow, discountCol).value = SetCorrectPriceStatInOutput("Discount", currentDataRow, False) 'Discount
-                    .Cells(OutputFirstRow, totalNetCol).value = SetCorrectPriceStatInOutput("Total Net", currentDataRow, False) 'Total Net
+                    Dim checkIfRowIs2ndBottom As Boolean
+                    checkIfRowIs2ndBottom = CheckIf2ndBottom(SecondBottomDict, currentDataRow.item("Item_No"))
+                             
+                    .Cells(OutputFirstRow, unitGrossCol).value = SetCorrectPriceStatInOutput("Unit Gross", currentDataRow, checkIfRowIs2ndBottom) 'Unit Gross
+                    .Cells(OutputFirstRow, totalGrossCol).value = SetCorrectPriceStatInOutput("Total Gross", currentDataRow, checkIfRowIs2ndBottom) 'Total Gross
+                    .Cells(OutputFirstRow, discountCol).value = SetCorrectPriceStatInOutput("Discount", currentDataRow, checkIfRowIs2ndBottom) 'Discount
+                    .Cells(OutputFirstRow, totalNetCol).value = SetCorrectPriceStatInOutput("Total Net", currentDataRow, checkIfRowIs2ndBottom) 'Total Net
                     
                     'move to next row
                     OutputFirstRow = OutputFirstRow + 1
