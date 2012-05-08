@@ -1,4 +1,4 @@
-Sub ImportAndExport()
+Sub ImportAndExportDamien()
     Application.DisplayAlerts = False
     On Error Resume Next
     
@@ -102,7 +102,7 @@ Sub ImportAndExport()
             .Sheets(record.item("Title")).Cells(5, 2).value = .Sheets("Summary").Cells(11, 2).value
         Next record
         
-        .SaveAs "Output (" & Format(Date, "Medium Date") & ")"
+        .SaveAs "2nd_bottom_ (" & Format(Date, "Medium Date") & ")"
         Dim OutputFileName As String
         OutputFileName = .FullName
         .Close
@@ -115,6 +115,9 @@ Sub ImportAndExport()
     
     Dim LastKnownPhase As String
     LastKnownPhase = ""
+                    
+    Dim SecondBottomDict As New Dictionary
+    Set SecondBottomDict = get2ndBottomNodes()
     
     'now we insert the items into each area tab one by one
     For Each AreaTab In Tabs.Items()
@@ -137,12 +140,12 @@ Sub ImportAndExport()
         Dim OutputFile As Workbook
         Set OutputFile = Workbooks.Open(Filename:=OutputFileName)
         
-        'we will start inserting data at row 11 of the output sheet
+        'we will start inserting data at row 10 of the output sheet
         Dim OutputFirstRow As Integer
         Dim OutputFirstRowConstant As Integer
         
-        'we will start from row 11, and the constant will store this number to it will be easier to reset
-        OutputFirstRowConstant = 11
+        'we will start from row 10, and the constant will store this number to it will be easier to reset
+        OutputFirstRowConstant = 10
         
         'outputfirstrow is a counter
         OutputFirstRow = OutputFirstRowConstant
@@ -151,23 +154,8 @@ Sub ImportAndExport()
         
             'select the correct sheet based on the area title
             With .Sheets(CurrentTab)
-                'insert a blank row to put the phase name in each area tab
-                .Range("10:10").Insert shift:=xlDown
-                
-                'insert grab phase data
-                Dim PhaseItemNo As String
-                PhaseItemNo = CStr(AreaTab.item("Parent"))
-                
-                Dim PhaseTitleString As String
-                PhaseTitleString = Phases.item(PhaseItemNo)
-                
-                'insert Phase Number and Title
-                .Cells(10, 1).value = PhaseItemNo 'item no
-                .Cells(10, 2).value = PhaseTitleString 'title
-                
                 'now we loop thru all the records that should appear in this data sheet
                 For Each record In AllRecordsInArea.Items()
-                
                     'insert all the data
                     Dim ItemNumberString As String
                     ItemNumberString = CStr(record.item("Item_No"))
@@ -194,7 +182,10 @@ Sub ImportAndExport()
                     Dim currentDataRow As New Dictionary
                     Set currentDataRow = dataRecord
                     
-                    .Cells(OutputFirstRow, unitGrossCol).value = SetCorrectPriceStatInOutput("Unit Gross", currentDataRow, False) 'Unit Gross
+                    Dim checkIfRowIs2ndBottom As Boolean
+                    checkIfRowIs2ndBottom = CheckIf2ndBottom(SecondBottomDict, currentDataRow.item("Item_No"))
+                             
+                    .Cells(OutputFirstRow, unitGrossCol).value = SetCorrectPriceStatInOutput("Unit Gross", currentDataRow, checkIfRowIs2ndBottom) 'Unit Gross
                     .Cells(OutputFirstRow, totalGrossCol).value = SetCorrectPriceStatInOutput("Total Gross", currentDataRow, False) 'Total Gross
                     .Cells(OutputFirstRow, discountCol).value = SetCorrectPriceStatInOutput("Discount", currentDataRow, False) 'Discount
                     .Cells(OutputFirstRow, totalNetCol).value = SetCorrectPriceStatInOutput("Total Net", currentDataRow, False) 'Total Net
@@ -204,6 +195,20 @@ Sub ImportAndExport()
                     
                     Set currentDataRow = Nothing
                 Next dataRecord
+                
+                'insert a blank row to put the phase name in each area tab
+                .Range("10:10").Insert shift:=xlDown
+                
+                'insert grab phase data
+                Dim PhaseItemNo As String
+                PhaseItemNo = CStr(AreaTab.item("Parent"))
+                
+                Dim PhaseTitleString As String
+                PhaseTitleString = Phases.item(PhaseItemNo)
+                
+                'insert Phase Number and Title
+                .Cells(10, 1).value = PhaseItemNo 'item no
+                .Cells(10, 2).value = PhaseTitleString 'title
                 
                 'after all data is inserted, we get the Total Gross, Total Net, Support, and Net with Support
                 Dim TabTotalGross As Double
@@ -219,8 +224,9 @@ Sub ImportAndExport()
                 
                 'group the rows in the current tab
                 .Range("10:" & OutputFirstRow).AutoOutline
+                
             End With
-    
+            
             'update the summary sheet now
             With .Sheets("Summary")
                 
@@ -256,6 +262,18 @@ Sub ImportAndExport()
         End With
         Set AllRecordsInArea = Nothing
     Next AreaTab
+    
+    Set OutputFile = Workbooks.Open(Filename:=OutputFileName)
+    
+    Dim BottomDict As New Dictionary
+    Set BottomDict = getBottomNodes()
+
+    'hide the bottom nodes
+    For Each node In BottomDict.Items
+        SheetName = CStr(node.item("OutputSheetName"))
+        RowNumber = node.item("RowInOutput")
+        OutputFile.Sheets(SheetName).Rows(RowNumber & ":" & RowNumber).EntireRow.Hidden = True
+    Next node
     
     MsgBox "DONE!"
 End Sub
