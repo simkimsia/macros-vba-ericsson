@@ -22,7 +22,7 @@ After it is done, it will output an excel file called Output(DD-MMM-YYYY).xls
 
 
 
-2ndbottom output file
+Damien's Output file
 ------------------
 
 To use the macros for output that Damien needs,
@@ -40,6 +40,12 @@ Navigate to the input file we've provided and click okay
 Give it about 5 mins to run (for 300+ Lines). You can go do something else, except use BlackBox(Demo) or the Input file.
 
 After it is done, it will output an excel file called 2ndbottom_Output(DD-MMM-YYYY).xls
+
+
+New Input File (3 Phases)
+------------------------
+
+This is another input file that contains 3 phases each eith 1 area, rather than 3 areas in 1 Phase.
 
 
 Assumptions
