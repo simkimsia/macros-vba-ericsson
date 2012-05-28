@@ -54,10 +54,12 @@ Total Gross = Total Gross of the Tab
 Total Net (b4 incentives) = Total Net of the tab
 Total Net (after incentives) = Total net (b4 incentives) - Incentives
 
+We assume no orphan nodes. i.e. all nodes have parents except the mother node (apex node)
+
 We expect all areas (level 2 items) to have unique names
 
-For mistakes, we expect mistakes to only happen at the end of an item number, projected downwards i.e
-in this series,
+For mistakes, we expect no orphan nodes,
+i.e in this series,
 [1.1.1
  1.1.1.1
  1.1.1.2
@@ -66,8 +68,8 @@ in this series,
 the macros will correct it but not the following mistake
 [1.1.1
  1.1.1.1
- 1.1.2.2 <- unable to correct because there is no parent with this mistake
- 1.1.3	 <- able to correct because mistake is at the end
+ 1.1.2.2 <- unable to correct because this is an orphan node
+ 1.1.3	 <- able to correct because it has a parent
  1.1.3.1]
-As long as the mistake happens at the END of an item number and is projected downards, it will be corrected, but not mistakes that occur in the middle of an item number without the parent having the same mistake.
+As long as the no orphan nodes, mistakes will be corrected, but orphan nodes will be ignored and skipped. If there are any blanks in the output file or database, check to input file to see if it is an orphan node.
 
