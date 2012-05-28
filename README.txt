@@ -55,3 +55,19 @@ Total Net (b4 incentives) = Total Net of the tab
 Total Net (after incentives) = Total net (b4 incentives) - Incentives
 
 We expect all areas (level 2 items) to have unique names
+
+For mistakes, we expect mistakes to only happen at the end of an item number, projected downwards i.e
+in this series,
+[1.1.1
+ 1.1.1.1
+ 1.1.1.2
+ 1.1.3
+ 1.1.3.1]
+the macros will correct it but not the following mistake
+[1.1.1
+ 1.1.1.1
+ 1.1.2.2 <- unable to correct because there is no parent with this mistake
+ 1.1.3	 <- able to correct because mistake is at the end
+ 1.1.3.1]
+As long as the mistake happens at the END of an item number and is projected downards, it will be corrected, but not mistakes that occur in the middle of an item number without the parent having the same mistake.
+
