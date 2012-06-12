@@ -1,6 +1,19 @@
 README
 ======
 
+How to save a Macro Free workbook
+---------------------------------
+Each input file needs to be saved as a Macro free workbook, so that its macros do not clash with the macros of Blackbox
+
+1. With the input file open, click File -> Save As
+
+2. A small window will pop up. In the "Save as type" field, select Excel Workbook
+
+3. Another window will pop up, saying that the VB project feature can't be saved in a macro-free workbook. Ignore this, and just click Yes to continue saving as a macro-free workbook.
+
+and that's it. You can now run the new macro free input file in Blackbox
+
+
 Normal output file
 ------------------
 
